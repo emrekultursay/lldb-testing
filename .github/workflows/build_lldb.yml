@@ -9,6 +9,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Download dependencies
+      run: ./download_dependencies.sh
+
     - name: Build LLDB for host
       run: echo "[TODO] building LLDB"
 
