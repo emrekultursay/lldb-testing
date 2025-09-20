@@ -7,8 +7,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-      submodules: true
+    - uses: actions/checkout@v5
+      with:
+        submodules: true
 
     - name: Download dependencies
       run: ./download_dependencies.sh
