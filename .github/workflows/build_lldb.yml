@@ -8,6 +8,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      submodules: true
 
     - name: Download dependencies
       run: ./download_dependencies.sh
