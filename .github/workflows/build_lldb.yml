@@ -11,9 +11,6 @@ jobs:
       with:
         submodules: true
 
-    - name: Build everything
-      run: ./ci.sh
-
     - name: Download dependencies
       run: ./download_dependencies.sh
 
