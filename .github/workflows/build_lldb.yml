@@ -11,6 +11,9 @@ jobs:
       with:
         submodules: true
 
+    - name: Install SWIG
+      run: sudo apt-get update && sudo apt-get install -y swig
+
     - name: Download dependencies
       run: ./download_dependencies.sh
 

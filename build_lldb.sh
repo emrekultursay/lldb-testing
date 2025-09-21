@@ -13,6 +13,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 CMAKE="${SCRIPT_DIR}/cmake/3.22.1/bin/cmake"
 NINJA="${SCRIPT_DIR}/cmake/3.22.1/bin/ninja"
 ANDROID_NDK_HOME="${SCRIPT_DIR}/ndk/android-ndk-r28c"
+PYTHON_DIR="${SCRIPT_DIR}/python3.11"
 
 CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-Debug}"
 
@@ -22,7 +23,7 @@ mkdir -p "${BUILD_DIR}"
 mkdir -p "${OUT_DIR}"
 
 
-# TODO: Enable Python so that we can write python-based tests.
+# Note: Python requires swig. We assume it's installed on the local machine.
 
 pushd "${BUILD_DIR}"
 $CMAKE ../llvm-project/llvm -G Ninja \
@@ -30,7 +31,10 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DCMAKE_MAKE_PROGRAM="${NINJA}" \
   -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
   -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
-  -DLLDB_ENABLE_PYTHON=0 \
+  -DLLDB_ENABLE_PYTHON=ON \
+  -DPython3_LIBRARIES="${PYTHON_DIR}/lib/libpython3.11.so" \
+  -DPython3_INCLUDE_DIRS="${PYTHON_DIR}/include" \
+  -DPython3_EXECUTABLE="${PYTHON_DIR}/bin/python3" \
   -DLLDB_ENABLE_LIBEDIT=0 \
   -DLLDB_ENABLE_CURSES=0 \
   -DLLVM_TARGETS_TO_BUILD="X86" \
