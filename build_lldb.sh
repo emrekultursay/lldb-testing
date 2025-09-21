@@ -33,7 +33,7 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
   -DLLDB_ENABLE_PYTHON=ON \
   -DPython3_LIBRARIES="${PYTHON_DIR}/lib/libpython3.11.so" \
-  -DPython3_INCLUDE_DIRS="${PYTHON_DIR}/include" \
+  -DPython3_INCLUDE_DIRS="${PYTHON_DIR}/include/python3.11" \
   -DPython3_EXECUTABLE="${PYTHON_DIR}/bin/python3" \
   -DLLDB_ENABLE_LIBEDIT=0 \
   -DLLDB_ENABLE_CURSES=0 \
