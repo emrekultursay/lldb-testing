@@ -1,62 +1,71 @@
 name: Manual Submodule Update
 
-# This workflow is triggered ONLY when you manually run it from the Actions tab.
 on:
+  # Allows manual running from the Actions tab
   workflow_dispatch:
-    # Optional: You can add inputs here if you wanted to select a specific submodule or branch
-    # inputs:
-    #   submodule_name:
-    #     description: 'Submodule to update'
-    #     required: false
-    #     default: 'all'
 
 jobs:
   update_submodule:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout main repository
+      - name: Checkout main repo (Required to run Git commands)
         uses: actions/checkout@v4
         with:
-          # IMPORTANT: Use a Personal Access Token (PAT) here for write access.
-          # The built-in GITHUB_TOKEN has limited permissions for this task.
+          # Use the Fine-Grained PAT for push access later
           token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
+          # We need to clone the submodule contents to find its current SHA
           submodules: true
 
-      - name: Configure Git for the bot
+      - name: Configure Git User (Required for 'git commit')
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "github-actions-bot@users.noreply.github.com"
 
-      - name: Force Update and Check for Changes
-        id: update_and_check
+      - name: Check for new submodule commits and update
+        id: check
+        env:
+          SUBMODULE_PATH: llvm-project
+          SUBMODULE_BRANCH: main
         run: |
-          # 1. Fetch the latest commit for ALL submodules to ensure data is available locally
-          git submodule foreach git fetch
+          # 1. Get the currently committed SHA in the parent repo
+          CURRENT_SHA=$(git ls-files -s ${{ env.SUBMODULE_PATH }} | awk '{print $2}')
 
-          # 2. Update the parent repo's *index* to track the submodule's remote branch HEAD.
-          # This forces the change detection. The --remote flag is crucial here.
-          git submodule update --remote --recursive
+          # 2. Get the remote's latest SHA for the tracked branch, filtering explicitly
+          # This talks to the public submodule's Git server.
+          REMOTE_SHA=$(git ls-remote ${{ env.SUBMODULE_PATH }} ${{ env.SUBMODULE_BRANCH }} \
+                       | awk '$2 == "refs/heads/'"${{ env.SUBMODULE_BRANCH }}"'" {print $1}')
 
-          # 3. Check if any submodule reference in the index is different from the committed HEAD
-          if git diff --submodule=diff HEAD | grep "Subproject commit"; then
-            echo "Changes detected in submodule reference."
+          if [ -z "$REMOTE_SHA" ]; then
+            echo "Error: Could not determine the remote SHA for branch ${{ env.SUBMODULE_BRANCH }}"
+            exit 1
+          fi
 
-            # 4. Add the submodule changes and commit them to the parent repo
-            git add --all
-            git commit -m "Auto-update public submodule reference [ci skip]"
+          echo "Submodule: ${{ env.SUBMODULE_PATH }}"
+          echo "Current Committed SHA: $CURRENT_SHA"
+          echo "Remote Tip-of-Tree SHA: $REMOTE_SHA"
 
-            # Set output flag for the next step
+          # --- Comparison and Update Logic ---
+          if [ "$CURRENT_SHA" != "$REMOTE_SHA" ]; then
             echo "::set-output name=changes_detected::true"
+
+            # 3. Update the submodule working directory to the new SHA
+            git -C ${{ env.SUBMODULE_PATH }} checkout "$REMOTE_SHA"
+
+            # 4. Stage and commit the change in the parent repository
+            git add ${{ env.SUBMODULE_PATH }}
+            # [ci skip] prevents this commit from accidentally triggering another CI run
+            git commit -m "Auto-update submodule ${{ env.SUBMODULE_PATH }} to $REMOTE_SHA [ci skip]"
           else
-            echo "No changes to the submodule reference detected."
             echo "::set-output name=changes_detected::false"
+            echo "No changes to the submodule reference detected."
           fi
 
       - name: Push new submodule reference
-        # Only run the push step if changes were detected
-        if: steps.update_and_check.outputs.changes_detected == 'true'
+        # Only run the push step if changes were detected in the previous step
+        if: steps.check.outputs.changes_detected == 'true'
         run: |
           # Authenticated push using the PAT.
+          # The REPO_PAT only needs 'Contents: Read and write' on your main repo.
           git push https://x-access-token:${{ secrets.REPO_PAT }}@github.com/${{ github.repository }} HEAD:${{ github.ref }}
