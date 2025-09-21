@@ -11,20 +11,7 @@ jobs:
       with:
         submodules: true
 
-    - name: Download dependencies
-      run: ./download_dependencies.sh
+    - name: Build everything
+      run: ./ci.sh
 
-    - name: Build LLDB for host
-      run: echo "[TODO] building LLDB"
 
-    - name: Build lldb-server for Android arm64
-      run: echo "[TODO] building lldb-server for Android arm64"
-
-    - name: Build lldb-server for Android arm32
-      run: echo "[TODO] building lldb-server for Android arm32"
-
-    - name: Run tests for Android arm64
-      run: echo "[TODO] running tests for Android arm64"
-
-    - name: Run tests for Android arm32
-      run: echo "[TODO] running tests for Android arm32"
