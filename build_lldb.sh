@@ -19,9 +19,10 @@ CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-Debug}"
 
 BUILD_DIR="${SCRIPT_DIR}/build-linux-x86_64"
 OUT_DIR="${BUILD_DIR}/out"
+INSTALL_DIR="${BUILD_DIR}/install"
 mkdir -p "${BUILD_DIR}"
 mkdir -p "${OUT_DIR}"
-
+mkdir -p "${INSTALL_DIR}"
 
 # Note: Python requires swig. We assume it's installed on the local machine.
 
@@ -38,14 +39,14 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DLLDB_ENABLE_LIBEDIT=0 \
   -DLLDB_ENABLE_CURSES=0 \
   -DLLVM_TARGETS_TO_BUILD="X86" \
-  -DLLVM_HOST_TRIPLE="x86_64-unknown-linux-gnu"
+  -DLLVM_HOST_TRIPLE="x86_64-unknown-linux-gnu" \
+  -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 pushd "${OUT_DIR}"
 time "${NINJA}" lldb
 
-# TODO: enable stripping.
-#echo "Stripping lldb binary to reduce size"
-#"${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip bin/lldb"
+echo "Installing LLDB to ${INSTALL_DIR}"
+time "${NINJA}" tools/lldb/install
 
 echo ""
 echo "=============================="
