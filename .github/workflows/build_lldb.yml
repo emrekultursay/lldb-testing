@@ -14,6 +14,8 @@ jobs:
     - name: Download dependencies
       run: ./download_dependencies.sh
 
+    # Build
+
     - name: Build LLDB for host
       run: ./build_lldb.sh
 
@@ -21,7 +23,16 @@ jobs:
       run: ANDROID_ABI=arm64-v8a ./build_lldb_server.sh
 
     - name: Build lldb-server for Android arm32
-      run: echo "Skipping build for arm32..."
+      run: ANDROID_ABI=armeabi-v7a ./build_lldb_server.sh
+
+    # Upload
+
+    - name: Upload LLDB for host
+      uses: actions/upload-artifact@v4
+      with:
+        name: lldb-linux-x86_64-${{ github.run_id }}
+        path: build-arm64-v8a/out/bin/lldb-server
+        if-no-files-found: 'error'
 
     - name: Upload lldb-server for Android arm64
       uses: actions/upload-artifact@v4
@@ -30,9 +41,9 @@ jobs:
         path: build-arm64-v8a/out/bin/lldb-server
         if-no-files-found: 'error'
 
-    - name: Upload LLDB for host
+    - name: Upload lldb-server for Android arm32
       uses: actions/upload-artifact@v4
       with:
-        name: lldb-linux-x86_64-${{ github.run_id }}
-        path: build-arm64-v8a/out/bin/lldb-server
+        name: lldb-server-arm32-${{ github.run_id }}
+        path: build-armeabi-v7a/out/bin/lldb-server
         if-no-files-found: 'error'
