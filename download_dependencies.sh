@@ -2,6 +2,13 @@
 
 set -ex
 
+echo ""
+echo "=============================="
+echo "Downloading dependencies..."
+echo "=============================="
+echo ""
+
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 CMAKE_DIR="${SCRIPT_DIR}/cmake/3.22.1"

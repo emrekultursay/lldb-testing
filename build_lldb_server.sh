@@ -1,6 +1,12 @@
 #!/bin/bash
 
-echo "Building lldb-server"
+ANDROID_ABI=${ANDROID_ABI:-arm64-v8a}
+
+echo ""
+echo "=============================="
+echo "Building lldb-server for ${ANDROID_ABI}"
+echo "=============================="
+echo ""
 
 set -x
 
@@ -11,7 +17,6 @@ CMAKE="${SCRIPT_DIR}/cmake/3.22.1/bin/cmake"
 NINJA="${SCRIPT_DIR}/cmake/3.22.1/bin/ninja"
 ANDROID_NDK_HOME="${SCRIPT_DIR}/ndk/android-ndk-r28c"
 
-ANDROID_ABI=${ANDROID_ABI:-arm64-v8a}
 ANDROID_PLATFORM=android-24
 
 if [[ "$ANDROID_ABI" == "arm64-v8a" ]]; then
@@ -53,3 +58,6 @@ time "${NINJA}" lldb-server
 echo "Stripping lldb-server binary to reduce size"
 "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip bin/lldb-server"
 
+echo ""
+echo "=============================="
+echo ""
