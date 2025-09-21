@@ -30,7 +30,7 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -B "${OUT_DIR}" \
   -DCMAKE_MAKE_PROGRAM="${NINJA}" \
   -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
-  -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
+  -DLLVM_ENABLE_PROJECTS="clang;lldb" \
   -DLLDB_ENABLE_PYTHON=ON \
   -DPython3_LIBRARIES="${PYTHON_DIR}/lib/libpython3.11.so" \
   -DPython3_INCLUDE_DIRS="${PYTHON_DIR}/include/python3.11" \

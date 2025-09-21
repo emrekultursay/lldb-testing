@@ -41,7 +41,7 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -B "${OUT_DIR}" \
   -DCMAKE_MAKE_PROGRAM="${NINJA}" \
   -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
-  -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
+  -DLLVM_ENABLE_PROJECTS="clang;lldb" \
   -DLLDB_ENABLE_PYTHON=0 \
   -DLLDB_ENABLE_LIBEDIT=0 \
   -DLLDB_ENABLE_CURSES=0 \
