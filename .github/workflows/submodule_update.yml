@@ -1,8 +1,13 @@
 name: Manual Submodule Update
 
 on:
+  schedule:
+    # Runs every day at 10:00 AM PDT (7 hours behind UTC)
+    # This corresponds to 17:00 UTC.
+    - cron: '0 17 * * *'
   # Allows manual running from the Actions tab
   workflow_dispatch:
+
 
 jobs:
   update_submodule:
