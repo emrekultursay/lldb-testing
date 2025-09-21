@@ -47,6 +47,7 @@ time "${NINJA}" lldb
 
 echo "Installing LLDB to ${INSTALL_DIR}"
 time "${NINJA}" tools/lldb/install
+cp "${PYTHON_DIR}/lib/libpython3.11.so.1.0" "${INSTALL_DIR}/lib/"
 
 echo ""
 echo "=============================="
