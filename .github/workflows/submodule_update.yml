@@ -1,0 +1,54 @@
+name: Manual Submodule Update
+
+# This workflow is triggered ONLY when you manually run it from the Actions tab.
+on:
+  workflow_dispatch:
+    # Optional: You can add inputs here if you wanted to select a specific submodule or branch
+    # inputs:
+    #   submodule_name:
+    #     description: 'Submodule to update'
+    #     required: false
+    #     default: 'all'
+
+jobs:
+  update_submodule:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+        with:
+          # IMPORTANT: Use a Personal Access Token (PAT) here for write access.
+          # The built-in GITHUB_TOKEN has limited permissions for this task.
+          token: ${{ secrets.REPO_PAT }}
+          fetch-depth: 0
+
+      - name: Configure Git for the bot
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "github-actions-bot@users.noreply.github.com"
+
+      - name: Update submodule to latest remote commit
+        run: |
+          # The --remote flag fetches the latest commit from the submodule's tracking branch
+          # (e.g., 'main' or 'master' in the submodule repo).
+          git submodule update --remote --rebase
+
+      - name: Check for changes and commit
+        id: check
+        run: |
+          # The 'git status --porcelain' command checks for uncommitted changes.
+          # If a new submodule commit was pulled, it will show up as a change.
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "::set-output name=changes_detected::true"
+            git add .
+            git commit -m "Manual auto-update submodule reference"
+          else
+            echo "::set-output name=changes_detected::false"
+          fi
+
+      - name: Push new submodule reference
+        # Only run the push step if changes were detected
+        if: steps.check.outputs.changes_detected == 'true'
+        run: |
+          git push

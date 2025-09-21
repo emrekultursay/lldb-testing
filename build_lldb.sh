@@ -39,8 +39,9 @@ $CMAKE ../llvm-project/llvm -G Ninja \
 pushd "${OUT_DIR}"
 time "${NINJA}" lldb
 
-echo "Stripping lldb-server binary to reduce size"
-"${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip bin/lldb"
+# TODO: enable stripping.
+#echo "Stripping lldb binary to reduce size"
+#"${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip bin/lldb"
 
 echo ""
 echo "=============================="
