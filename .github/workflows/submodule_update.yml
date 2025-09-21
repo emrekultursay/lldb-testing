@@ -22,33 +22,42 @@ jobs:
           # The built-in GITHUB_TOKEN has limited permissions for this task.
           token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
+          # DO NOT enable submodules here (we handle it in the next step)
+          submodules: false
 
       - name: Configure Git for the bot
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "github-actions-bot@users.noreply.github.com"
 
-      - name: Update submodule to latest remote commit
+      - name: Force Update and Check for Changes
+        id: update_and_check
         run: |
-          # The --remote flag fetches the latest commit from the submodule's tracking branch
-          # (e.g., 'main' or 'master' in the submodule repo).
-          git submodule update --remote --rebase
+          # 1. Fetch the latest commit for ALL submodules to ensure data is available locally
+          git submodule foreach git fetch
 
-      - name: Check for changes and commit
-        id: check
-        run: |
-          # The 'git status --porcelain' command checks for uncommitted changes.
-          # If a new submodule commit was pulled, it will show up as a change.
-          if [[ -n "$(git status --porcelain)" ]]; then
+          # 2. Update the parent repo's *index* to track the submodule's remote branch HEAD.
+          # This forces the change detection. The --remote flag is crucial here.
+          git submodule update --remote --recursive
+
+          # 3. Check if any submodule reference in the index is different from the committed HEAD
+          if git diff --submodule=diff HEAD | grep "Subproject commit"; then
+            echo "Changes detected in submodule reference."
+
+            # 4. Add the submodule changes and commit them to the parent repo
+            git add --all
+            git commit -m "Auto-update public submodule reference [ci skip]"
+
+            # Set output flag for the next step
             echo "::set-output name=changes_detected::true"
-            git add .
-            git commit -m "Manual auto-update submodule reference"
           else
+            echo "No changes to the submodule reference detected."
             echo "::set-output name=changes_detected::false"
           fi
 
       - name: Push new submodule reference
         # Only run the push step if changes were detected
-        if: steps.check.outputs.changes_detected == 'true'
+        if: steps.update_and_check.outputs.changes_detected == 'true'
         run: |
-          git push
+          # Authenticated push using the PAT.
+          git push https://x-access-token:${{ secrets.REPO_PAT }}@github.com/${{ github.repository }} HEAD:${{ github.ref }}
