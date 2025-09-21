@@ -6,7 +6,7 @@ echo "Building LLDB for linux-x86_64"
 echo "=============================="
 echo ""
 
-set -x
+set -ex
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
@@ -33,8 +33,8 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DLLDB_ENABLE_PYTHON=0 \
   -DLLDB_ENABLE_LIBEDIT=0 \
   -DLLDB_ENABLE_CURSES=0 \
-  -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake" \
-  -DCROSS_TOOLCHAIN_FLAGS_NATIVE='-DCMAKE_C_COMPILER=cc;-DCMAKE_CXX_COMPILER=c++'
+  -DLLVM_TARGETS_TO_BUILD="X86" \
+  -DLLVM_HOST_TRIPLE="x86_64-unknown-linux-gnu"
 
 pushd "${OUT_DIR}"
 time "${NINJA}" lldb
