@@ -2,6 +2,7 @@
 
 ANDROID_ABI=${ANDROID_ABI:-arm64-v8a}
 
+echo "::group::Build lldb-server for ${ANDROID_ABI}"
 echo ""
 echo "=============================="
 echo "Building lldb-server for ${ANDROID_ABI}"
@@ -53,11 +54,13 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DCROSS_TOOLCHAIN_FLAGS_NATIVE='-DCMAKE_C_COMPILER=cc;-DCMAKE_CXX_COMPILER=c++'
 
 pushd "${OUT_DIR}"
-time "${NINJA}" lldb-server
+echo "SKIPPING THE ACTUAL BUILD"
+#time "${NINJA}" lldb-server
 
-echo "Stripping lldb-server binary to reduce size"
-"${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip bin/lldb-server"
+#echo "Stripping lldb-server binary to reduce size"
+#"${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip bin/lldb-server"
 
 echo ""
 echo "=============================="
 echo ""
+echo "::endgroup::"
