@@ -15,8 +15,8 @@ jobs:
           # Use the Fine-Grained PAT for push access later
           token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
-          # We need to clone the submodule contents to find its current SHA
-          submodules: true
+          # Avoid cloning the submodule
+          submodules: false
 
       - name: Configure Git User (Required for 'git commit')
         run: |
@@ -29,12 +29,16 @@ jobs:
           SUBMODULE_PATH: llvm-project
           SUBMODULE_BRANCH: main
         run: |
-          # 1. Get the currently committed SHA in the parent repo
+          # Since we didn't clone, we need to get it from remote URL.
+          SUBMODULE_URL=$(git config -f .gitmodules submodule.${{ env.SUBMODULE_PATH }}.url)
+
+          # 1. Get the currently committed SHA in the parent repo's index
+          # (This SHA is recorded in the .gitmodules file from the checkout)
           CURRENT_SHA=$(git ls-files -s ${{ env.SUBMODULE_PATH }} | awk '{print $2}')
 
-          # 2. Get the remote's latest SHA for the tracked branch, filtering explicitly
-          # This talks to the public submodule's Git server.
-          REMOTE_SHA=$(git ls-remote ${{ env.SUBMODULE_PATH }} ${{ env.SUBMODULE_BRANCH }} \
+          # 2. Get the remote's latest SHA for the tracked branch
+          #    (Uses the public URL directly without cloning the repo)
+          REMOTE_SHA=$(git ls-remote "$SUBMODULE_URL" ${{ env.SUBMODULE_BRANCH }} \
                        | awk '$2 == "refs/heads/'"${{ env.SUBMODULE_BRANCH }}"'" {print $1}')
 
           if [ -z "$REMOTE_SHA" ]; then
@@ -50,12 +54,11 @@ jobs:
           if [ "$CURRENT_SHA" != "$REMOTE_SHA" ]; then
             echo "::set-output name=changes_detected::true"
 
-            # 3. Update the submodule working directory to the new SHA
-            git -C ${{ env.SUBMODULE_PATH }} checkout "$REMOTE_SHA"
+            # 3. Update the submodule reference in the parent's index
+            #    (This command updates the index without touching the working directory)
+            git update-index --add --cacheinfo 160000 "$REMOTE_SHA" "$SUBMODULE_PATH"
 
-            # 4. Stage and commit the change in the parent repository
-            git add ${{ env.SUBMODULE_PATH }}
-            # [ci skip] prevents this commit from accidentally triggering another CI run
+            # 4. Commit the change in the parent repository
             git commit -m "Auto-update submodule ${{ env.SUBMODULE_PATH }} to $REMOTE_SHA [ci skip]"
           else
             echo "::set-output name=changes_detected::false"
@@ -63,9 +66,7 @@ jobs:
           fi
 
       - name: Push new submodule reference
-        # Only run the push step if changes were detected in the previous step
         if: steps.check.outputs.changes_detected == 'true'
         run: |
           # Authenticated push using the PAT.
-          # The REPO_PAT only needs 'Contents: Read and write' on your main repo.
           git push https://x-access-token:${{ secrets.REPO_PAT }}@github.com/${{ github.repository }} HEAD:${{ github.ref }}
