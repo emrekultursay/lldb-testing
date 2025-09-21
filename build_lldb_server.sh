@@ -2,7 +2,6 @@
 
 ANDROID_ABI=${ANDROID_ABI:-arm64-v8a}
 
-echo "::group::Build lldb-server for ${ANDROID_ABI}"
 echo ""
 echo "=============================="
 echo "Building lldb-server for ${ANDROID_ABI}"
@@ -63,4 +62,3 @@ echo "SKIPPING THE ACTUAL BUILD"
 echo ""
 echo "=============================="
 echo ""
-echo "::endgroup::"

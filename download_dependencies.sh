@@ -2,7 +2,6 @@
 
 set -ex
 
-echo "::group::Download Dependencies"
 echo ""
 echo "=============================="
 echo "Downloading dependencies..."
@@ -28,4 +27,3 @@ if [[ ! -d "${NDK_DIR}" ]]; then
   rm android-ndk-r28c-linux.zip
 fi
 
-echo "::endgroup::"
