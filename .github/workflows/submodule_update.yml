@@ -22,8 +22,7 @@ jobs:
           # The built-in GITHUB_TOKEN has limited permissions for this task.
           token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
-          # DO NOT enable submodules here (we handle it in the next step)
-          submodules: false
+          submodules: true
 
       - name: Configure Git for the bot
         run: |
