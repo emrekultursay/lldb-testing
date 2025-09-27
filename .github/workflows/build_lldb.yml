@@ -1,6 +1,12 @@
 name: Builld LLDB
 
-on: [push]
+on:
+  push:
+  schedule:
+    # Runs every day at 11:00 AM PDT (7 hours behind UTC)
+    # This corresponds to 18:00 UTC.
+    - cron: '0 18 * * *'
+
 
 jobs:
   build-and-test:
