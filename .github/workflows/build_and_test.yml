@@ -93,6 +93,6 @@ jobs:
     # Test
 
     - name: Run tests
-      run: find .
+      run: ./test.sh
 
 
