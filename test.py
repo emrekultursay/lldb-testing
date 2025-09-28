@@ -74,6 +74,7 @@ def run_debugging_session(serial, package):
 
     print(f"Attached to process with PID {process.GetProcessID()}.")
 
+    time.sleep(10)
 
     # 7. We will now enter the debugger's command loop to allow for interactive debugging.
     # This is a common practice when attaching to a long-running process.
@@ -96,13 +97,45 @@ def run_debugging_session(serial, package):
     print("Exiting.")
 
 def get_serial():
-  return 'localhost:41585'
+  cmd = [
+      "adb",
+      "devices",
+  ]
+  result = subprocess.run(cmd, check=True, capture_output=True)
+  out = result.stdout.decode('utf-8')
+  devices = list(filter(str.strip, out.splitlines()[1:]))
+  print(f'Devices found: {str(devices)}')
+  if len(devices) == 0:
+    print('No devices found!')
+    exit(1)
+
+  found = False
+  for device in devices:
+    parts = device.split()
+    if len(parts) != 2:
+      print(f'Failed to parse device line: "{device}", skipping device.')
+      continue
+
+    serial, state = parts[0], parts[1]
+    if state != 'device':
+      continue
+    found = True
+    break
+
+  if not found:
+    print('No online devices found')
+    exit(1)
+
+  print(f'Using device serial = {serial}')
+  return serial
+
 
 def get_pid():
   return 1234
 
 
 def install_apk():
+  print('Installing APK: [not implemented]...')
   pass
 
 
@@ -119,6 +152,7 @@ def run_as(serial, package, cmd):
   return subprocess.Popen(new_cmd)
 
 def launch_lldb_server(serial, package):
+  print('Launching lldb-server on device...')
   cmd = [
       f"/data/data/{package}/lldb/bin/start_lldb_server.sh",
       f"/data/data/{package}/lldb",
@@ -131,9 +165,22 @@ def launch_lldb_server(serial, package):
   time.sleep(1)
   return process
 
-def launch_app(activity):
+def launch_app(serial, package, activity):
+  print('Stopping and re-launching app...')
   cmd = [
       "adb",
+      "-s",
+      serial,
+      "shell",
+      "am",
+      "force-stop",
+      package
+  ]
+  subprocess.run(cmd, check=True)
+  cmd = [
+      "adb",
+      "-s",
+      serial,
       "shell",
       "am",
       "start",
@@ -143,20 +190,59 @@ def launch_app(activity):
       "-c",
       "android.intent.category.LAUNCHER"
   ]
-  subprocess.run(cmd)
+  subprocess.run(cmd, check=True)
 
+def push_file(serial, local_path, remote_path):
+  cmd = [
+      "adb",
+      "-s",
+      serial,
+      "push",
+      local_path,
+      remote_path
+  ]
+  subprocess.run(cmd, check=True)
+
+
+def push_lldb_server(serial, package):
+  print('Pushing lldb-server to device...')
+  push_file(
+      serial,
+      "build-arm64-v8a/out/bin/lldb-server",
+      "/data/local/tmp/")
+  push_file(
+      serial,
+      "start_lldb_server.sh",
+      "/data/local/tmp/")
+
+  for subcmd in [
+      "mkdir -p lldb/bin",
+      "cp /data/local/tmp/lldb-server lldb/bin",
+      "cp /data/local/tmp/start_lldb_server.sh lldb/bin/",
+      "chmod +x lldb/bin/lldb-server",
+      "chmod +x lldb/bin/start_lldb_server.sh",
+  ]:
+    return_code = run_as(serial, package, [subcmd]).wait()
+    assert return_code == 0
+
+
+def kill_lldb_server(serial, package):
+  run_as(serial, package, ["pkill", "-9", "lldb-server"]).wait()
 
 if __name__ == '__main__':
   serial = get_serial()
-  package = "com.example.myapplication"
+  #package = "com.example.myapplication"
+  package = "com.example.hellojni"
   activity = f"{package}/{package}.MainActivity"
   install_apk()
-  launch_app(activity)
+  launch_app(serial, package, activity)
+  kill_lldb_server(serial, package)
+  push_lldb_server(serial, package)
   process = launch_lldb_server(serial, package)
   try:
+    print("This is where the debug session will start")
     #run_debugging_session(serial, package)
-    time.sleep(200)
+    time.sleep(1000)
   finally:
-    print("Killing all lldb-server processes")
-    run_as(serial, package, ["pkill", "-9", "lldb-server"]).wait()
-
+    print("Killing all lldb-server processes on device")
+    kill_lldb_server(serial, package)
