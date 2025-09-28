@@ -1,4 +1,4 @@
-name: Builld LLDB
+name: Build and test LLDB
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 
 jobs:
-  build-and-test:
+  build:
     runs-on: [self-hosted, builder]
 
     steps:
@@ -56,3 +56,42 @@ jobs:
         name: lldb-server-arm32-${{ github.run_id }}
         path: build-armeabi-v7a/out/bin/lldb-server
         if-no-files-found: 'error'
+
+
+  test:
+    # This job runs after 'build' completes.
+    needs: [build]
+
+    runs-on: [self-hosted, tester]
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        submodules: true
+
+    # Download
+
+    - name: Download LLDB for host
+      uses: actions/download-artifact@v4
+      with:
+        name: lldb-linux-x86_64-${{ github.run_id }}
+        path: build-linux-x86_64/install/
+
+    - name: Download lldb-server for Android arm64
+      uses: actions/download-artifact@v4
+      with:
+        name: lldb-server-arm64-${{ github.run_id }}
+        path: build-arm64-v8a/out/bin/
+
+    - name: Download lldb-server for Android arm32
+      uses: actions/download-artifact@v4
+      with:
+        name: lldb-server-arm32-${{ github.run_id }}
+        path: build-armeabi-v7a/out/bin/
+
+    # Test
+
+    - name: Run tests
+      run: find .
+
+
