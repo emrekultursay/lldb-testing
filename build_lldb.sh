@@ -15,7 +15,7 @@ NINJA="${SCRIPT_DIR}/cmake/3.22.1/bin/ninja"
 ANDROID_NDK_HOME="${SCRIPT_DIR}/ndk/android-ndk-r28c"
 PYTHON_DIR="${SCRIPT_DIR}/python3.11"
 
-CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-Debug}"
+CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-Release}"
 
 BUILD_DIR="${SCRIPT_DIR}/build-linux-x86_64"
 OUT_DIR="${BUILD_DIR}/out"
