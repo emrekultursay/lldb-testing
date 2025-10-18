@@ -1,7 +1,7 @@
 import lldb
 import subprocess
-import sys
 import time
+import argparse
 
 def run_debugging_session(serial, package):
     """
@@ -114,7 +114,22 @@ def wait_for_stop(listener, process, timeout_seconds):
   exit(1)
 
 
-def get_serial():
+def get_device_abis(serial):
+  cmd = [
+    'adb',
+    '-s',
+    serial,
+    'shell',
+    'getprop',
+    'ro.product.cpu.abilist'
+  ]
+  result = subprocess.run(cmd, check=True, capture_output=True)
+  out = result.stdout.decode('utf-8')
+  abis = out.split(',')
+  return abis
+
+
+def get_serial(android_abi):
   cmd = [
       'adb',
       'devices',
@@ -127,6 +142,7 @@ def get_serial():
     print('No devices found!')
     exit(1)
 
+  serial = None
   found = False
   for device in devices:
     parts = device.split()
@@ -137,6 +153,14 @@ def get_serial():
     serial, state = parts[0], parts[1]
     if state != 'device':
       continue
+
+    # Compare the ABI of the device against what we are looking for.
+    abis = get_device_abis(serial)
+    print(f'Target ABI={android_abi} Device ABIs: {str(abis)}')
+    if android_abi not in abis:
+      print(f'Skipping device: Requested ABI={android_abi} not found in device ABIs={str(abis)}')
+      continue
+
     found = True
     break
 
@@ -222,11 +246,12 @@ def push_file(serial, local_path, remote_path):
   subprocess.run(cmd, check=True)
 
 
-def push_lldb_server(serial, package):
+def push_lldb_server(serial, package, android_abi):
   print('Pushing lldb-server to device...')
+
   push_file(
       serial,
-      'build-arm64-v8a/out/bin/lldb-server',
+      f'build-{android_abi}/out/bin/lldb-server',
       '/data/local/tmp/')
   push_file(
       serial,
@@ -247,20 +272,29 @@ def push_lldb_server(serial, package):
 def kill_lldb_server(serial, package):
   run_as(serial, package, ['pkill', '-9', 'lldb-server']).wait()
 
-if __name__ == '__main__':
-  serial = get_serial()
-  #package = 'com.example.myapplication'
+def main(args):
+  serial = get_serial(args.android_abi)
+  # package = 'com.example.myapplication'
   package = 'com.example.hellojni'
   activity = f'{package}/{package}.MainActivity'
   install_apk()
   launch_app(serial, package, activity)
   kill_lldb_server(serial, package)
-  push_lldb_server(serial, package)
+  push_lldb_server(serial, package, args.android_abi)
   process = launch_lldb_server(serial, package)
   try:
     print('This is where the debug session will start')
     run_debugging_session(serial, package)
-    #time.sleep(1000)
+    # time.sleep(1000)
   finally:
     print('Killing all lldb-server processes on device')
     kill_lldb_server(serial, package)
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+      "--android_abi",
+      default="arm64-v8a",
+      help="The ABI of the target Android device"
+  )
+  main(parser.parse_args())

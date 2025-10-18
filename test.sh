@@ -1,5 +1,6 @@
 #!/bin/bash
 
+ANDROID_ABI=${ANDROID_ABI:-arm64-v8a}
 
 echo ""
 echo "=============================="
@@ -21,7 +22,7 @@ PYTHON="${PYTHON_DIR}/bin/python3"
 # We set PYTHONPATH this way so that Python can execute `import lldb`
 export PYTHONPATH=$("${LLDB}" -P)
 
-"$PYTHON" test.py
+"$PYTHON" test.py --android_abi="${ANDROID_ABI}"
 
 
 
