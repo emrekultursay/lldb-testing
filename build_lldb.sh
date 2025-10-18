@@ -36,7 +36,7 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DPython3_LIBRARIES="${PYTHON_DIR}/lib/libpython3.11.so" \
   -DPython3_INCLUDE_DIRS="${PYTHON_DIR}/include/python3.11" \
   -DPython3_EXECUTABLE="${PYTHON_DIR}/bin/python3" \
-  -DLLDB_ENABLE_LIBEDIT=0 \
+  -DLLDB_ENABLE_LIBEDIT=1 \
   -DLLDB_ENABLE_CURSES=0 \
   -DLLVM_TARGETS_TO_BUILD="X86;AArch64;ARM" \
   -DLLVM_HOST_TRIPLE="x86_64-unknown-linux-gnu" \
