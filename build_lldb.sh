@@ -38,7 +38,7 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DPython3_EXECUTABLE="${PYTHON_DIR}/bin/python3" \
   -DLLDB_ENABLE_LIBEDIT=0 \
   -DLLDB_ENABLE_CURSES=0 \
-  -DLLVM_TARGETS_TO_BUILD="X86" \
+  -DLLVM_TARGETS_TO_BUILD="X86;AArch64;ARM" \
   -DLLVM_HOST_TRIPLE="x86_64-unknown-linux-gnu" \
   -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
