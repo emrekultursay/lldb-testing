@@ -125,7 +125,7 @@ def get_device_abis(serial):
   ]
   result = subprocess.run(cmd, check=True, capture_output=True)
   out = result.stdout.decode('utf-8')
-  abis = out.split(',')
+  abis = out.strip().split(',')
   return abis
 
 
