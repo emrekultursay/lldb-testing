@@ -273,15 +273,15 @@ def build_testapp():
   subprocess.run(cmd, cwd='testapp', check=True)
 
 
-def install_apk(android_abi):
+def install_apk(serial, android_abi):
   """Uninstalls the previous version and installs the ABI-specific APK."""
   package = 'com.example.testapp'
   print(f'Uninstalling {package}...')
-  subprocess.run(['adb', 'uninstall', package], check=False) # OK if not installed
+  subprocess.run(['adb', '-s', serial, 'uninstall', package], check=False) # OK if not installed
 
   apk_path = f'testapp/app/build/outputs/apk/debug/app-{android_abi}-debug.apk'
   print(f'Installing APK: {apk_path}...')
-  subprocess.run(['adb', 'install', '-r', apk_path], check=True)
+  subprocess.run(['adb', '-s', serial, 'install', '-r', apk_path], check=True)
 
 
 def run_as(serial, package, cmd):
@@ -380,7 +380,7 @@ def main(args):
   package = 'com.example.testapp'
   activity = f'{package}/.MainActivity'
   build_testapp()
-  install_apk(args.android_abi)
+  install_apk(serial, args.android_abi)
   launch_app(serial, package, activity)
   kill_lldb_server(serial, package)
   push_lldb_server(serial, package, args.android_abi)
