@@ -112,6 +112,11 @@ def run_debugging_session(serial, package, android_abi):
         print('Error: Breakpoint at native-lib.cpp:12 not resolved!')
         exit(1)
 
+    # ART uses SIGSEGV/SIGBUS internally (e.g. implicit null checks). Pass them
+    # to the app without stopping, like Android Studio does.
+    debugger.HandleCommand('process handle SIGSEGV -s false -p true -n false')
+    debugger.HandleCommand('process handle SIGBUS -s false -p true -n false')
+
     # Continue process and wait for breakpoint
     print('Continuing process (async)...')
     process.Continue()
