@@ -8,7 +8,7 @@ echo "Building lldb-server for ${ANDROID_ABI}"
 echo "=============================="
 echo ""
 
-set -x
+set -ex
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
@@ -58,7 +58,7 @@ pushd "${OUT_DIR}"
 time "${NINJA}" lldb-server
 
 echo "Stripping lldb-server binary to reduce size"
-"${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip bin/lldb-server"
+"${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip" bin/lldb-server
 
 echo ""
 echo "=============================="
