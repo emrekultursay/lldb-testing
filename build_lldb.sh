@@ -26,6 +26,16 @@ mkdir -p "${INSTALL_DIR}"
 
 # Note: Python requires swig. We assume it's installed on the local machine.
 
+# Use ccache if available. CI keeps its cache outside the workspace, so it
+# survives the checkout cleanup between runs.
+CCACHE_FLAGS=()
+if command -v ccache >/dev/null; then
+  CCACHE_FLAGS=(
+    -DCMAKE_C_COMPILER_LAUNCHER=ccache
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+  )
+fi
+
 pushd "${BUILD_DIR}"
 $CMAKE ../llvm-project/llvm -G Ninja \
   -B "${OUT_DIR}" \
@@ -45,6 +55,7 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DLLVM_INCLUDE_EXAMPLES=OFF \
   -DCLANG_INCLUDE_TESTS=OFF \
   -DLLDB_INCLUDE_TESTS=OFF \
+  "${CCACHE_FLAGS[@]}" \
   -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 pushd "${OUT_DIR}"

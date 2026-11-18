@@ -57,6 +57,16 @@ else
   echo "Host tablegen tools not found in ${NATIVE_TOOL_DIR}; they will be built."
 fi
 
+# Use ccache if available. CI keeps its cache outside the workspace, so it
+# survives the checkout cleanup between runs.
+CCACHE_FLAGS=()
+if command -v ccache >/dev/null; then
+  CCACHE_FLAGS=(
+    -DCMAKE_C_COMPILER_LAUNCHER=ccache
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+  )
+fi
+
 pushd "${BUILD_DIR}"
 $CMAKE ../llvm-project/llvm -G Ninja \
   -B "${OUT_DIR}" \
@@ -79,6 +89,7 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DCLANG_INCLUDE_TESTS=OFF \
   -DLLDB_INCLUDE_TESTS=OFF \
   "${TABLEGEN_FLAGS[@]}" \
+  "${CCACHE_FLAGS[@]}" \
   -DCROSS_TOOLCHAIN_FLAGS_NATIVE='-DCMAKE_C_COMPILER=cc;-DCMAKE_CXX_COMPILER=c++'
 
 pushd "${OUT_DIR}"
