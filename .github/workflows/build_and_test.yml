@@ -2,6 +2,8 @@ name: Build and test LLDB
 
 on:
   push:
+    branches: [main]
+  pull_request:
   schedule:
     # Runs every day at 11:00 AM PDT (7 hours behind UTC)
     # This corresponds to 18:00 UTC.
