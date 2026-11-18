@@ -21,10 +21,13 @@ ANDROID_PLATFORM=android-24
 
 if [[ "$ANDROID_ABI" == "arm64-v8a" ]]; then
   LLVM_HOST_TRIPLE=aarch64-unknown-linux-android
+  LLVM_TARGET=AArch64
 elif [[ "$ANDROID_ABI" == "armeabi-v7a" ]]; then
   LLVM_HOST_TRIPLE=arm-unknown-linux-androideabi
+  LLVM_TARGET=ARM
 elif [[ "$ANDROID_ABI" == "x86_64" ]]; then
   LLVM_HOST_TRIPLE=x86_64-unknown-linux-android
+  LLVM_TARGET=X86
 else
   echo "Invalid ANDROID_ABI=$ANDROID_ABI"
   exit 1
@@ -37,6 +40,22 @@ BUILD_DIR="${SCRIPT_DIR}/build-${ANDROID_ABI}"
 OUT_DIR="${BUILD_DIR}/out"
 mkdir -p "${BUILD_DIR}"
 mkdir -p "${OUT_DIR}"
+
+# Reuse the host-built tablegen tools (llvm-tblgen, clang-tblgen, lldb-tblgen, ...)
+# from build_lldb.sh instead of building them again for each ABI. LLVM falls back
+# to building any tool that is missing from this directory.
+# LLVM_TABLEGEN and CLANG_TABLEGEN are CMake cache variables, so they must be
+# passed explicitly to take effect on an existing build directory.
+NATIVE_TOOL_DIR="${SCRIPT_DIR}/build-linux-x86_64/out/bin"
+TABLEGEN_FLAGS=()
+if [[ -x "${NATIVE_TOOL_DIR}/llvm-tblgen" && -x "${NATIVE_TOOL_DIR}/clang-tblgen" ]]; then
+  TABLEGEN_FLAGS=(
+    -DLLVM_TABLEGEN="${NATIVE_TOOL_DIR}/llvm-tblgen"
+    -DCLANG_TABLEGEN="${NATIVE_TOOL_DIR}/clang-tblgen"
+  )
+else
+  echo "Host tablegen tools not found in ${NATIVE_TOOL_DIR}; they will be built."
+fi
 
 pushd "${BUILD_DIR}"
 $CMAKE ../llvm-project/llvm -G Ninja \
@@ -52,6 +71,14 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DANDROID_PLATFORM="${ANDROID_PLATFORM}" \
   -DANDROID_ALLOW_UNDEFINED_SYMBOLS=On \
   -DLLVM_HOST_TRIPLE="${LLVM_HOST_TRIPLE}" \
+  -DLLVM_TARGETS_TO_BUILD="${LLVM_TARGET}" \
+  -DLLVM_NATIVE_TOOL_DIR="${NATIVE_TOOL_DIR}" \
+  -DLLVM_INCLUDE_TESTS=OFF \
+  -DLLVM_INCLUDE_BENCHMARKS=OFF \
+  -DLLVM_INCLUDE_EXAMPLES=OFF \
+  -DCLANG_INCLUDE_TESTS=OFF \
+  -DLLDB_INCLUDE_TESTS=OFF \
+  "${TABLEGEN_FLAGS[@]}" \
   -DCROSS_TOOLCHAIN_FLAGS_NATIVE='-DCMAKE_C_COMPILER=cc;-DCMAKE_CXX_COMPILER=c++'
 
 pushd "${OUT_DIR}"
