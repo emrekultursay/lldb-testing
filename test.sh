@@ -24,7 +24,17 @@ PYTHON="${PYTHON_DIR}/bin/python3"
 export PYTHONHOME="${SCRIPT_DIR}/python3.11"
 export PYTHONPATH=$("${LLDB}" -P)
 
-"$PYTHON" test.py --android_abi="${ANDROID_ABI}"
+# TEST_REPEAT runs the test several times, e.g. to measure flakiness.
+TEST_REPEAT="${TEST_REPEAT:-1}"
+FAILURES=0
+for i in $(seq 1 "${TEST_REPEAT}"); do
+  echo "=== Run ${i}/${TEST_REPEAT} (${ANDROID_ABI})"
+  if ! "$PYTHON" test.py --android_abi="${ANDROID_ABI}"; then
+    FAILURES=$((FAILURES + 1))
+  fi
+done
+echo "=== ${ANDROID_ABI}: ${FAILURES}/${TEST_REPEAT} runs failed"
+[[ "${FAILURES}" -eq 0 ]]
 
 
 
