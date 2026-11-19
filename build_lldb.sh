@@ -55,14 +55,15 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DLLVM_INCLUDE_EXAMPLES=OFF \
   -DCLANG_INCLUDE_TESTS=OFF \
   -DLLDB_INCLUDE_TESTS=OFF \
+  -DLLDB_TOOL_LLDB_INSTR_BUILD=OFF \
   "${CCACHE_FLAGS[@]}" \
   -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 pushd "${OUT_DIR}"
 time "${NINJA}" lldb
 
-echo "Installing LLDB to ${INSTALL_DIR}"
-time "${NINJA}" tools/lldb/install
+echo "Installing LLDB (stripped) to ${INSTALL_DIR}"
+time "${NINJA}" tools/lldb/install/strip
 cp "${PYTHON_DIR}/lib/libpython3.11.so.1.0" "${INSTALL_DIR}/lib/"
 
 echo ""
