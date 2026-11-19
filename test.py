@@ -117,32 +117,35 @@ def run_debugging_session(serial, package, android_abi):
     debugger.HandleCommand('process handle SIGSEGV -s false -p true -n false')
     debugger.HandleCommand('process handle SIGBUS -s false -p true -n false')
 
-    # Continue process and wait for our breakpoint. The process may also stop
-    # for other reasons (e.g. internal breakpoints); report and continue past
-    # those instead of assuming the first stop is ours.
+    # Continue process and wait for the breakpoint. Any stop other than our
+    # breakpoint is a failure: this test exists to catch LLDB regressions, so
+    # it must not skip past unexpected stops.
     print('Continuing process (async)...')
     process.Continue()
     # In async mode, we need to wait for the events on the listener
     print(f'Waiting for breakpoint to be hit (timeout 100s)...')
-    deadline = time.time() + 100
-    while True:
-        remaining = deadline - time.time()
-        if remaining <= 0:
-            print('Error: Timed out waiting for breakpoint at native-lib.cpp:12')
-            dump_stopped_threads(process)
-            exit(1)
-        wait_for_stop(debugger.GetListener(), process, remaining)
-        thread = find_thread_stopped_at_breakpoint(process, breakpoint.GetID())
-        if thread:
-            break
-        print('Process stopped, but not at our breakpoint:')
-        dump_stopped_threads(process)
-        print('Continuing process (async)...')
-        process.Continue()
+    wait_for_stop(debugger.GetListener(), process, 100)
 
-    # Verify location
+    thread, location_id = find_thread_stopped_at_breakpoint(process, breakpoint.GetID())
+    if not thread:
+        print(f'Error: Process stopped, but no thread is stopped at breakpoint {breakpoint.GetID()}')
+        dump_stopped_threads(process)
+        exit(1)
+
+    # Verify that frame 0 is at the breakpoint location's address.
     process.SetSelectedThread(thread)
     frame = thread.GetFrameAtIndex(0)
+    location = breakpoint.FindLocationByID(location_id)
+    expected_pc = location.GetLoadAddress() if location.IsValid() else lldb.LLDB_INVALID_ADDRESS
+    if frame.GetPC() != expected_pc:
+        print(f'Error: Thread {thread.GetThreadID()} reports breakpoint '
+              f'{breakpoint.GetID()}.{location_id}, but frame 0 PC={frame.GetPC():#x} '
+              f'!= breakpoint location address {expected_pc:#x}')
+        print(f'  Frame 0 module: {frame.GetModule().GetFileSpec()}')
+        dump_stopped_threads(process)
+        exit(1)
+
+    # Verify location
     line_entry = frame.GetLineEntry()
     filename = line_entry.GetFileSpec().GetFilename()
     line = line_entry.GetLine()
@@ -150,6 +153,8 @@ def run_debugging_session(serial, package, android_abi):
 
     if filename != 'native-lib.cpp' or line != 12:
         print(f'Error: Stopped at unexpected location {filename}:{line}, expected native-lib.cpp:12')
+        print(f'  Frame 0 PC={frame.GetPC():#x}, module: {frame.GetModule().GetFileSpec()}')
+        dump_stopped_threads(process)
         exit(1)
 
     # Print stack trace using API
@@ -192,14 +197,18 @@ def run_debugging_session(serial, package, android_abi):
     print('Test finished. Exiting.')
 
 def find_thread_stopped_at_breakpoint(process, breakpoint_id):
-  """Returns the thread stopped at the given breakpoint, or None."""
+  """Returns (thread, location_id) for the thread stopped at the given
+  breakpoint, or (None, None). Breakpoint stop data is a list of
+  (breakpoint_id, location_id) pairs."""
   for i in range(process.GetNumThreads()):
     thread = process.GetThreadAtIndex(i)
-    if (thread.GetStopReason() == lldb.eStopReasonBreakpoint and
-        thread.GetStopReasonDataCount() > 0 and
-        thread.GetStopReasonDataAtIndex(0) == breakpoint_id):
-      return thread
-  return None
+    if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
+      continue
+    count = thread.GetStopReasonDataCount()
+    for j in range(0, count - 1, 2):
+      if thread.GetStopReasonDataAtIndex(j) == breakpoint_id:
+        return thread, thread.GetStopReasonDataAtIndex(j + 1)
+  return None, None
 
 
 def dump_stopped_threads(process):
@@ -212,7 +221,8 @@ def dump_stopped_threads(process):
             for j in range(thread.GetStopReasonDataCount())]
     print(f'  Thread {thread.GetThreadID()} ({thread.GetName()}): '
           f'reason={thread.GetStopReason()} data={data} '
-          f'desc={thread.GetStopDescription(256)}')
+          f'desc={thread.GetStopDescription(256)} '
+          f'pc={thread.GetFrameAtIndex(0).GetPC():#x}')
     for j in range(min(5, thread.GetNumFrames())):
       print(f'    Frame #{j}: {thread.GetFrameAtIndex(j)}')
 
