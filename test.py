@@ -117,21 +117,32 @@ def run_debugging_session(serial, package, android_abi):
     debugger.HandleCommand('process handle SIGSEGV -s false -p true -n false')
     debugger.HandleCommand('process handle SIGBUS -s false -p true -n false')
 
-    # Continue process and wait for breakpoint
+    # Continue process and wait for our breakpoint. The process may also stop
+    # for other reasons (e.g. internal breakpoints); report and continue past
+    # those instead of assuming the first stop is ours.
     print('Continuing process (async)...')
     process.Continue()
     # In async mode, we need to wait for the events on the listener
     print(f'Waiting for breakpoint to be hit (timeout 100s)...')
-    wait_for_stop(debugger.GetListener(), process, 100)
+    deadline = time.time() + 100
+    while True:
+        remaining = deadline - time.time()
+        if remaining <= 0:
+            print('Error: Timed out waiting for breakpoint at native-lib.cpp:12')
+            dump_stopped_threads(process)
+            exit(1)
+        wait_for_stop(debugger.GetListener(), process, remaining)
+        thread = find_thread_stopped_at_breakpoint(process, breakpoint.GetID())
+        if thread:
+            break
+        print('Process stopped, but not at our breakpoint:')
+        dump_stopped_threads(process)
+        print('Continuing process (async)...')
+        process.Continue()
 
-    # Verify stop reason and location
-    thread = process.GetSelectedThread()
-    stop_reason = thread.GetStopReason()
-    if stop_reason != lldb.eStopReasonBreakpoint:
-        print(f'Error: Expected breakpoint stop reason, got {lldb.SBDebugger.StateAsCString(process.GetState())} stop reason: {stop_reason}')
-        exit(1)
-
-    frame = thread.GetSelectedFrame()
+    # Verify location
+    process.SetSelectedThread(thread)
+    frame = thread.GetFrameAtIndex(0)
     line_entry = frame.GetLineEntry()
     filename = line_entry.GetFileSpec().GetFilename()
     line = line_entry.GetLine()
@@ -180,6 +191,32 @@ def run_debugging_session(serial, package, android_abi):
 
     print('Test finished. Exiting.')
 
+def find_thread_stopped_at_breakpoint(process, breakpoint_id):
+  """Returns the thread stopped at the given breakpoint, or None."""
+  for i in range(process.GetNumThreads()):
+    thread = process.GetThreadAtIndex(i)
+    if (thread.GetStopReason() == lldb.eStopReasonBreakpoint and
+        thread.GetStopReasonDataCount() > 0 and
+        thread.GetStopReasonDataAtIndex(0) == breakpoint_id):
+      return thread
+  return None
+
+
+def dump_stopped_threads(process):
+  """Prints stop reason, description and top frames of all stopped threads."""
+  for i in range(process.GetNumThreads()):
+    thread = process.GetThreadAtIndex(i)
+    if thread.GetStopReason() == lldb.eStopReasonNone:
+      continue
+    data = [thread.GetStopReasonDataAtIndex(j)
+            for j in range(thread.GetStopReasonDataCount())]
+    print(f'  Thread {thread.GetThreadID()} ({thread.GetName()}): '
+          f'reason={thread.GetStopReason()} data={data} '
+          f'desc={thread.GetStopDescription(256)}')
+    for j in range(min(5, thread.GetNumFrames())):
+      print(f'    Frame #{j}: {thread.GetFrameAtIndex(j)}')
+
+
 def wait_for_stop(listener, process, timeout_seconds):
   event = lldb.SBEvent()
   # Loop until the process is Stopped or timeout.
@@ -190,6 +227,10 @@ def wait_for_stop(listener, process, timeout_seconds):
         state_enum = lldb.SBProcess.GetStateFromEvent(event)
         print(f'Process state event: {lldb.SBDebugger.StateAsCString(state_enum)}')
         if state_enum == lldb.eStateStopped:
+          if lldb.SBProcess.GetRestartedFromEvent(event):
+            # LLDB stopped and automatically resumed (e.g. internal breakpoint).
+            print('  (process was automatically restarted; still waiting)')
+            continue
           return
         elif state_enum == lldb.eStateExited:
           print(f'Error: Process exited with status {process.GetExitStatus()}')
