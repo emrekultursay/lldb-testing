@@ -60,20 +60,25 @@ jobs:
 
     - name: ccache stats
       if: always()
-      run: ccache --show-stats
+      run: ccache --show-stats --verbose
 
     # Upload
 
-    # Pack into a single tar: upload-artifact doesn't preserve symlinks (liblldb.so
-    # would be uploaded 3x) and is slow with many small files.
+    # Pack into a single zstd-compressed tar: upload-artifact doesn't preserve
+    # symlinks (liblldb.so would be uploaded 3x), is slow with many small files,
+    # and its zip compression is weaker than zstd.
     - name: Pack LLDB for host
-      run: tar -cf lldb-linux-x86_64.tar -C build-linux-x86_64 install
+      run: |
+        command -v zstd >/dev/null || (sudo apt-get update && sudo apt-get install -y zstd)
+        tar -I 'zstd -T0 -10' -cf lldb-linux-x86_64.tar.zst -C build-linux-x86_64 install
+        ls -la lldb-linux-x86_64.tar.zst
 
     - name: Upload LLDB for host
       uses: actions/upload-artifact@v4
       with:
         name: lldb-linux-x86_64-${{ github.run_id }}
-        path: lldb-linux-x86_64.tar
+        path: lldb-linux-x86_64.tar.zst
+        compression-level: 0
         if-no-files-found: 'error'
 
     - name: Upload lldb-server for Android arm64
@@ -120,9 +125,10 @@ jobs:
 
     - name: Unpack LLDB for host
       run: |
+        command -v zstd >/dev/null || (sudo apt-get update && sudo apt-get install -y zstd)
         mkdir -p build-linux-x86_64
-        tar -xf lldb-linux-x86_64.tar -C build-linux-x86_64
-        rm lldb-linux-x86_64.tar
+        tar -I zstd -xf lldb-linux-x86_64.tar.zst -C build-linux-x86_64
+        rm lldb-linux-x86_64.tar.zst
 
     - name: Download lldb-server for Android arm64
       uses: actions/download-artifact@v4
