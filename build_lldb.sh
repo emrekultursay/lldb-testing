@@ -10,8 +10,8 @@ set -ex
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-CMAKE="${SCRIPT_DIR}/cmake/3.22.1/bin/cmake"
-NINJA="${SCRIPT_DIR}/cmake/3.22.1/bin/ninja"
+CMAKE="${SCRIPT_DIR}/cmake/3.31.6/bin/cmake"
+NINJA="${SCRIPT_DIR}/cmake/3.31.6/bin/ninja"
 ANDROID_NDK_HOME="${SCRIPT_DIR}/ndk/android-ndk-r28c"
 PYTHON_DIR="${SCRIPT_DIR}/python3.11"
 

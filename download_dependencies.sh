@@ -11,12 +11,12 @@ echo ""
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-CMAKE_DIR="${SCRIPT_DIR}/cmake/3.22.1"
+CMAKE_DIR="${SCRIPT_DIR}/cmake/3.31.6"
 if [[ ! -d "${CMAKE_DIR}" ]]; then
-  wget --progress=dot:giga https://dl.google.com/android/repository/cmake-3.22.1-linux.zip
+  wget --progress=dot:giga https://dl.google.com/android/repository/cmake-3.31.6-linux.zip
   mkdir -p "${CMAKE_DIR}"
-  unzip -q cmake-3.22.1-linux.zip -d "${CMAKE_DIR}"
-  rm cmake-3.22.1-linux.zip
+  unzip -q cmake-3.31.6-linux.zip -d "${CMAKE_DIR}"
+  rm cmake-3.31.6-linux.zip
 fi
 
 NDK_DIR=ndk
