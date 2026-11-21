@@ -36,6 +36,22 @@ if command -v ccache >/dev/null; then
   )
 fi
 
+# Prefer clang + lld when available: faster to compile LLVM and much faster
+# to link (e.g. liblldb.so) than gcc + GNU ld. LLVM enables precompiled
+# headers by default with Clang >= 18, which ccache can't cache, so keep
+# them off for the host build.
+COMPILER_FLAGS=()
+if command -v clang >/dev/null && command -v clang++ >/dev/null && command -v ld.lld >/dev/null; then
+  COMPILER_FLAGS=(
+    -DCMAKE_C_COMPILER=clang
+    -DCMAKE_CXX_COMPILER=clang++
+    -DLLVM_USE_LINKER=lld
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+  )
+else
+  echo "clang/lld not found; building host LLDB with the default compiler."
+fi
+
 pushd "${BUILD_DIR}"
 $CMAKE ../llvm-project/llvm -G Ninja \
   -B "${OUT_DIR}" \
@@ -57,6 +73,7 @@ $CMAKE ../llvm-project/llvm -G Ninja \
   -DLLDB_INCLUDE_TESTS=OFF \
   -DLLDB_TOOL_LLDB_INSTR_BUILD=OFF \
   "${CCACHE_FLAGS[@]}" \
+  "${COMPILER_FLAGS[@]}" \
   -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 pushd "${OUT_DIR}"
