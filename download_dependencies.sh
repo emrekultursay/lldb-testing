@@ -19,7 +19,7 @@ if [[ ! -d "${CMAKE_DIR}" ]]; then
   rm cmake-3.31.6-linux.zip
 fi
 
-NDK_DIR=ndk
+NDK_DIR="${SCRIPT_DIR}/ndk"
 if [[ ! -d "${NDK_DIR}" ]]; then
   wget --progress=dot:giga https://dl.google.com/android/repository/android-ndk-r28c-linux.zip
   mkdir -p "${NDK_DIR}"
@@ -27,12 +27,15 @@ if [[ ! -d "${NDK_DIR}" ]]; then
   rm android-ndk-r28c-linux.zip
 fi
 
-JDK_DIR=jdk
+# Pinned JDK (Temurin 17.0.21.1+2), verified by SHA-256.
+JDK_DIR="${SCRIPT_DIR}/jdk"
+JDK_URL="https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21.1%2B2/OpenJDK17U-jdk_x64_linux_hotspot_17.0.21.1_2.tar.gz"
+JDK_SHA256=0b0ac5eab6db6abaec68c9913bcddb31321e5da411c45073d520d9c125e6f7b4
 if [[ ! -d "${JDK_DIR}" ]]; then
-  # Download and extract
-  curl -L "https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse?project=jdk" -o jdk.tar.gz
-  mkdir -p ${JDK_DIR}
-  tar -xzf jdk.tar.gz -C ${JDK_DIR} --strip-components=1
+  curl -fL "${JDK_URL}" -o jdk.tar.gz
+  echo "${JDK_SHA256}  jdk.tar.gz" | sha256sum -c -
+  mkdir -p "${JDK_DIR}"
+  tar -xzf jdk.tar.gz -C "${JDK_DIR}" --strip-components=1
   rm jdk.tar.gz
 fi
 
