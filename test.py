@@ -5,6 +5,9 @@ import argparse
 
 _timestamp = int(time.time() * 100)
 
+# Upper bound for `adb install`/`adb uninstall`, which can hang on some devices.
+ADB_INSTALL_TIMEOUT_SECONDS = 120
+
 
 def run_debugging_session(serial, package, android_abi):
     """
@@ -136,7 +139,12 @@ def run_debugging_session(serial, package, android_abi):
     process.SetSelectedThread(thread)
     frame = thread.GetFrameAtIndex(0)
     location = breakpoint.FindLocationByID(location_id)
-    expected_pc = location.GetLoadAddress() if location.IsValid() else lldb.LLDB_INVALID_ADDRESS
+    if not location.IsValid():
+        print(f'Error: Thread {thread.GetThreadID()} reports breakpoint '
+              f'{breakpoint.GetID()}.{location_id}, but that location does not exist')
+        dump_stopped_threads(process)
+        exit(1)
+    expected_pc = location.GetLoadAddress()
     if frame.GetPC() != expected_pc:
         print(f'Error: Thread {thread.GetThreadID()} reports breakpoint '
               f'{breakpoint.GetID()}.{location_id}, but frame 0 PC={frame.GetPC():#x} '
@@ -212,11 +220,16 @@ def find_thread_stopped_at_breakpoint(process, breakpoint_id):
 
 
 def dump_stopped_threads(process):
-  """Prints stop reason, description and top frames of all stopped threads."""
+  """Prints stop reason, description and top frames of all stopped threads,
+  and of the selected thread even if it has no stop reason."""
+  selected_id = process.GetSelectedThread().GetThreadID()
   for i in range(process.GetNumThreads()):
     thread = process.GetThreadAtIndex(i)
-    if thread.GetStopReason() == lldb.eStopReasonNone:
+    is_selected = thread.GetThreadID() == selected_id
+    if thread.GetStopReason() == lldb.eStopReasonNone and not is_selected:
       continue
+    if is_selected:
+      print('  (selected thread)')
     data = [thread.GetStopReasonDataAtIndex(j)
             for j in range(thread.GetStopReasonDataCount())]
     print(f'  Thread {thread.GetThreadID()} ({thread.GetName()}): '
@@ -333,11 +346,24 @@ def install_apk(serial, android_abi):
   """Uninstalls the previous version and installs the ABI-specific APK."""
   package = 'com.example.testapp'
   print(f'Uninstalling {package}...')
-  subprocess.run(['adb', '-s', serial, 'uninstall', package], check=False) # OK if not installed
+  try:
+    # OK if not installed.
+    subprocess.run(['adb', '-s', serial, 'uninstall', package], check=False,
+                   timeout=ADB_INSTALL_TIMEOUT_SECONDS)
+  except subprocess.TimeoutExpired:
+    print(f'Error: adb uninstall timed out after {ADB_INSTALL_TIMEOUT_SECONDS}s')
+    exit(1)
 
   apk_path = f'testapp/app/build/outputs/apk/debug/app-{android_abi}-debug.apk'
   print(f'Installing APK: {apk_path}...')
-  subprocess.run(['adb', '-s', serial, 'install', '-r', apk_path], check=True)
+  try:
+    subprocess.run(['adb', '-s', serial, 'install', '-r', apk_path], check=True,
+                   timeout=ADB_INSTALL_TIMEOUT_SECONDS)
+  except subprocess.TimeoutExpired:
+    # Seen on some devices: adb install hangs indefinitely. Fail fast instead
+    # of blocking the runner.
+    print(f'Error: adb install timed out after {ADB_INSTALL_TIMEOUT_SECONDS}s')
+    exit(1)
 
 
 def run_as(serial, package, cmd):
