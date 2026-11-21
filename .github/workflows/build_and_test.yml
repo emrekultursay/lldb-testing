@@ -55,9 +55,6 @@ jobs:
     - name: Build lldb-server for Android arm32
       run: ANDROID_ABI=armeabi-v7a ./build_lldb_server.sh
 
-    - name: Build lldb-server for Android x86_64
-      run: ANDROID_ABI=x86_64 ./build_lldb_server.sh
-
     - name: ccache stats
       if: always()
       run: ccache --show-stats --verbose
@@ -95,12 +92,6 @@ jobs:
         path: build-armeabi-v7a/out/bin/lldb-server
         if-no-files-found: 'error'
 
-    - name: Upload lldb-server for Android x86_64
-      uses: actions/upload-artifact@v4
-      with:
-        name: lldb-server-x86_64-${{ github.run_id }}
-        path: build-x86_64/out/bin/lldb-server
-        if-no-files-found: 'error'
 
 
   test:
@@ -141,12 +132,6 @@ jobs:
       with:
         name: lldb-server-arm32-${{ github.run_id }}
         path: build-armeabi-v7a/out/bin/
-
-    - name: Download lldb-server for Android x86_64
-      uses: actions/download-artifact@v4
-      with:
-        name: lldb-server-x86_64-${{ github.run_id }}
-        path: build-x86_64/out/bin/
 
     # Test
 
