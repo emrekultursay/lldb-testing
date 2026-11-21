@@ -21,8 +21,16 @@ jobs:
       with:
         submodules: true
 
-    - name: Install SWIG
-      run: command -v swig >/dev/null || (sudo apt-get update && sudo apt-get install -y swig)
+    - name: Install SWIG, clang and lld
+      run: |
+        missing=()
+        command -v swig >/dev/null || missing+=(swig)
+        command -v clang >/dev/null || missing+=(clang)
+        command -v ld.lld >/dev/null || missing+=(lld)
+        if [[ ${#missing[@]} -gt 0 ]]; then
+          sudo apt-get update && sudo apt-get install -y "${missing[@]}"
+        fi
+        clang --version | head -1; ld.lld --version
 
     # Persistent compiler cache outside the workspace (which actions/checkout
     # wipes on every run). CCACHE_BASEDIR makes hits work across runners with
